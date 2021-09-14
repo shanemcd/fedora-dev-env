@@ -1,0 +1,182 @@
+---
+- hosts: all
+  tasks:
+    - name: Create sudoers file
+      become: yes
+      copy:
+        content: |
+          %wheel	ALL=(ALL)	NOPASSWD: ALL
+        dest: /etc/sudoers.d/wheel
+
+    - name: Create docker group
+      become: yes
+      group:
+        name: docker
+
+    - name: Configure user/groups
+      become: yes
+      user:
+        name: shanemcd
+        groups: docker
+
+    - name: Install deps
+      become: yes
+      dnf:
+        name:
+          - make
+          - zsh
+          - fzf
+          - util-linux-user
+          - python3-libselinux
+          - krb5-workstation
+          - docker-compose
+          - ansible
+          - origin-clients
+          - tmux
+          - dnf-utils
+          - gcc
+          - zlib-devel # for pyenv
+          - bzip2-devel
+          - openssl-devel
+          - readline-devel
+          - libsqlite3x-devel
+          - podman
+          - the_silver_searcher
+        state: present
+
+    - name: Install ZSH
+      shell: |
+        sh -c "$(curl -fsSL https://raw.githubusercontent.com/robbyrussell/oh-my-zsh/master/tools/install.sh)" "" --unattended
+      args:
+        creates: /home/shanemcd/.oh-my-zsh
+
+    - name: Set ZSH as default shell
+      become: yes
+      shell: |
+        chsh -s /usr/bin/zsh
+        chsh -s /usr/bin/zsh shanemcd
+
+    - name: Install Red Hat IT certs
+      become: yes
+      get_url:
+        url: "http://password.corp.redhat.com/{{ item }}"
+        dest: "/etc/pki/ca-trust/source/anchors/{{ item }}"
+      register: cert
+      with_items:
+        - legacy.crt
+        - RH-IT-Root-CA.crt
+
+    - name: Update trusted certs
+      become: yes
+      shell: update-ca-trust extract
+      when: cert is changed
+
+    - name: Install Red Hat IT repo
+      become: yes
+      yum_repository:
+        name: rcm-tools
+        gpgcheck: no
+        baseurl: http://download.devel.redhat.com/rel-eng/RCMTOOLS/latest-RCMTOOLS-2-F-33/compose/Everything/x86_64/os/
+        description: rcm-tools
+
+    # - name: Install rhpkg
+    #   become: yes
+    #   dnf:
+    #     name: rhpkg
+    #     state: present
+
+    - name: Set ZSH theme
+      lineinfile:
+        path: ~/.zshrc
+        regexp: '^ZSH_THEME='
+        line: 'ZSH_THEME=murilasso'
+
+    - name: enable fzf
+      lineinfile:
+        path: ~/.zshrc
+        line: source /usr/share/fzf/shell/key-bindings.zsh
+
+    - name: Enable gpg agent forwarding
+      lineinfile:
+        path: ~/.zshrc
+        line: gpgconf --create-socketdir
+
+    - name: Install Docker repo
+      become: yes
+      get_url:
+        url: https://download.docker.com/linux/fedora/docker-ce.repo
+        dest: /etc/yum.repos.d/docker-ce.repo
+
+    - name: Install Docker
+      become: yes
+      dnf:
+        name: docker-ce
+        state: present
+
+    - name: Create /etc/docker
+      become: yes
+      file:
+        path: /etc/docker
+        state: directory
+
+    - name: Install custom Docker daemon config
+      become: yes
+      copy:
+        content: |
+          {
+            "experimental": true,
+            "storage-driver": "overlay2",
+            "insecure-registries" : [
+              "brew-pulp-docker01.web.prod.ext.phx2.redhat.com:8888",
+              "docker-registry-default.ocp3.ansible.eng.rdu2.redhat.com",
+              "default-route-openshift-image-registry.apps.tower.ocp4.testing.ansible.com"
+
+            ]
+          }
+        dest: /etc/docker/daemon.json
+        owner: root
+        group: root
+
+    - name: (re)Start and enable Docker
+      become: yes
+      service:
+        name: docker
+        state: restarted
+        enabled: yes
+
+    - name: Configure git
+      shell: |
+        git config --global user.email "me@shanemcd.com"
+        git config --global user.name "Shane McDonald"
+
+    - name: Install tmux configuration
+      become: yes
+      copy:
+        content: |
+          set -g mouse on
+          set -g base-index 1
+          setw -g pane-base-index 1
+          bind-key -n C-l send-keys C-l \; send-keys -R \; clear-history
+          set -g history-limit 999999999
+        owner: shanemcd
+        group: shanemcd
+        dest: /home/shanemcd/.tmux.conf
+
+    - name: Configure SSHD
+      become: yes
+      copy:
+        content: |
+          AcceptEnv RED_HAT_USER RED_HAT_PASSWORD OPENSHIFT_USER OPENSHIFT_PASSWORD
+          StreamLocalBindUnlink yes
+        dest: /etc/ssh/sshd_config.d/shanemcd.conf
+        owner: root
+        group: root
+        mode: 0600
+      register: sshd_config
+
+    - name: Restart SSHD
+      become: yes
+      service:
+        name: sshd
+        state: restarted
+      when: sshd_config.changed

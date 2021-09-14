@@ -1,0 +1,47 @@
+{
+  "builders": [
+      {
+          "type": "vmware-iso",
+          "name": "{{ user `name` }}",
+          "vm_name": "{{ user `template` }}",
+          "boot_command": [
+              "<tab> ",
+              "<wait>inst.text net.ifnames=0 ",
+              "<wait>inst.ks=http://{{.HTTPIP}}:{{.HTTPPort}}/ks.cfg ",
+              "<wait><enter>"
+          ],
+          "boot_wait": "5s",
+          "cpus": "{{ user `cpus` }}",
+          "disk_size": "{{user `disk_size`}}",
+          "guest_os_type": "fedora-64",
+          "http_directory": "{{user `http_directory`}}",
+          "iso_checksum": "{{user `iso_checksum`}}",
+          "iso_url": "{{user `mirror`}}/{{user `mirror_directory`}}/{{user `iso_name`}}",
+          "memory": "{{ user `memory` }}",
+          "output_directory": "{{ user `home` }}/VMs/fedora34",
+          "shutdown_command": "echo 'vagrant' | sudo -S shutdown -P now",
+          "ssh_port": 22,
+          "ssh_timeout": "1000s",
+          "ssh_username": "shanemcd",
+          "ssh_private_key_file": "{{ user `home` }}/.ssh/id_ed25519",
+          "tools_upload_flavor": "linux",
+          "version": "18"
+      }
+  ],
+    "variables": {
+        "cpus": "3",
+        "disk_size": "76800",
+        "http_directory": "{{template_dir}}/http",
+        "http_proxy": "{{env `http_proxy`}}",
+        "https_proxy": "{{env `https_proxy`}}",
+        "iso_checksum": "e1a38b9faa62f793ad4561b308c31f32876cfaaee94457a7a9108aaddaeec406",
+        "iso_name": "Fedora-Server-netinst-x86_64-34-1.2.iso",
+        "ks_path": "ks.cfg",
+        "memory": "8192",
+        "mirror": "http://download.fedoraproject.org/pub/fedora/linux",
+        "mirror_directory": "releases/34/Server/x86_64/iso",
+        "name": "fedora34",
+        "template": "fedora-x86_64",
+        "home": "{{env `HOME`}}"
+    }
+}

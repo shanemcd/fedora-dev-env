@@ -42,6 +42,7 @@
           - libsqlite3x-devel
           - podman
           - the_silver_searcher
+          - openssl
         state: present
 
     - name: Install ZSH

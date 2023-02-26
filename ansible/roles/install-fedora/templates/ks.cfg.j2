@@ -1,0 +1,49 @@
+url --mirrorlist=http://mirrors.fedoraproject.org/mirrorlist?repo=fedora-$releasever&arch=$basearch
+repo --name=fedora-updates --mirrorlist="https://mirrors.fedoraproject.org/mirrorlist?repo=updates-released-f{{ fedora_major_version }}&arch=$basearch"
+network --onboot=yes --bootproto=dhcp --hostname=fedora{{ fedora_major_version }}
+
+bootloader --location=mbr --driveorder=sda
+clearpart --all --drives=sda
+
+part /boot --size=512 --asprimary --ondrive=sda --fstype=xfs
+part / --size={{ disk_size - 1000 }} --grow --asprimary --ondrive=sda --fstype=xfs
+part biosboot --fstype=biosboot --size=1 --ondrive=sda --fstype=xfs
+
+lang en_US.UTF-8
+keyboard dvorak
+rootpw --lock
+user --name={{ fedora_username }}
+timezone America/New_York
+
+%packages
+@core
+@base-x
+@firefox
+@fonts
+@gnome-desktop
+@hardware-support
+@input-methods
+@multimedia
+@networkmanager-submodules
+@standard
+@workstation-product
+%end
+
+%post
+
+# Enable SSHd for Packer provisioning
+systemctl enable sshd.service
+
+# Enable the GUI at startup
+# systemctl enable gdm.service
+# systemctl set-default graphical.target
+
+install -o {{ fedora_username }} -g {{ fedora_username }} -m 0700 -d /home/{{ fedora_username }}/.ssh
+install -o {{ fedora_username }} -g {{ fedora_username }} -m 0644 /dev/null /home/{{ fedora_username }}/.ssh/authorized_keys
+curl -sL -o /home/{{ fedora_username }}/.ssh/authorized_keys https://github.com/{{ github_username }}.keys
+
+echo '{{ fedora_username }} ALL=(ALL) NOPASSWD: ALL' >> /etc/sudoers.d/{{ fedora_username }}
+
+%end
+
+reboot --eject

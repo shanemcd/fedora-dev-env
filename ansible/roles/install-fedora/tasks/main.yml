@@ -1,0 +1,54 @@
+- name: Check for existing VM
+  stat:
+    path: "{{ packer_output_dir }}/fedora{{ fedora_major_version }}"
+  register: output_dir
+
+- name: Fail if VM already exists
+  fail:
+    msg: "VM already exists at {{ packer_output_dir }}/fedora{{ fedora_major_version }}"
+  when: output_dir.stat.exists
+
+- name: Fetch Fedora release metadata
+  uri:
+    url: https://getfedora.org/releases.json
+  register: fedora_releases
+
+- name: Extract netinst ISO information
+  set_fact:
+    iso_info: |
+      {{
+        fedora_releases.json |
+        selectattr("version", "eq", fedora_major_version) |
+        selectattr("arch", "eq", ansible_architecture) |
+        selectattr("variant", "eq", "Server") |
+        selectattr("link", "search", "netinst") |
+        first
+      }}
+
+- name: Create temporary directory for rendering kickstart
+  tempfile:
+    state: directory
+  register: kickstart_dest
+
+- name: Render kickstart
+  template:
+    src: ks.cfg.j2
+    dest: "{{ kickstart_dest.path }}/ks.cfg"
+
+- name: Construct Packer command
+  set_fact:
+    packer_cmd: >
+      packer build
+        -var 'name=fedora{{ fedora_major_version }}'
+        -var 'ssh_username={{ fedora_username }}'
+        -var 'iso_url={{ iso_info.link }}'
+        -var 'iso_checksum={{ iso_info.sha256 }}'
+        -var 'cpus={{ cpus }}'
+        -var 'memory={{ memory }}'
+        -var 'disk_size={{ disk_size }}'
+        -var 'kickstart_dir={{ kickstart_dest.path }}'
+        -var 'output_directory={{ packer_output_dir }}/fedora{{ fedora_major_version }}'
+        {{ packer_dir }}
+
+- name: Run Packer
+  command: "{{ packer_cmd }}"

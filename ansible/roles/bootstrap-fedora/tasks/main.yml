@@ -1,0 +1,94 @@
+- name: Install Docker repo
+  get_url:
+    url: https://download.docker.com/linux/fedora/docker-ce.repo
+    dest: /etc/yum.repos.d/docker-ce.repo
+  become: true
+
+- name: Install deps
+  become: true
+  dnf:
+    name:
+      - make
+      - zsh
+      - fzf
+      - util-linux-user
+      - python3-libselinux
+      - krb5-workstation
+      - docker-compose
+      - ansible
+      - tmux
+      - dnf-utils
+      - gcc
+      - bzip2-devel
+      - openssl-devel
+      - readline-devel
+      - libsqlite3x-devel
+      - podman
+      - the_silver_searcher
+      - openssl
+      - docker-ce
+    state: present
+
+- name: Create docker group
+  become: true
+  group:
+    name: docker
+
+- name: Configure user/groups
+  become: true
+  user:
+    name: shanemcd
+    groups: docker
+
+- name: Install ZSH
+  shell: |
+    sh -c "$(curl -fsSL https://raw.githubusercontent.com/robbyrussell/oh-my-zsh/master/tools/install.sh)" "" --unattended
+  args:
+    creates: /home/shanemcd/.oh-my-zsh
+
+- name: Set ZSH as default shell
+  become: true
+  shell: |
+    chsh -s /usr/bin/zsh
+    chsh -s /usr/bin/zsh shanemcd
+
+- name: Set ZSH theme
+  lineinfile:
+    path: ~/.zshrc
+    regexp: '^ZSH_THEME='
+    line: 'ZSH_THEME=murilasso'
+
+- name: enable fzf
+  lineinfile:
+    path: ~/.zshrc
+    line: source /usr/share/fzf/shell/key-bindings.zsh
+
+- name: Enable gpg agent forwarding
+  lineinfile:
+    path: ~/.zshrc
+    line: gpgconf --create-socketdir
+
+- name: (re)Start and enable Docker
+  become: true
+  service:
+    name: docker
+    state: restarted
+    enabled: yes
+
+- name: Configure git
+  shell: |
+    git config --global user.email "me@shanemcd.com"
+    git config --global user.name "Shane McDonald"
+
+- name: Install tmux configuration
+  become: true
+  copy:
+    content: |
+      set -g mouse on
+      set -g base-index 1
+      setw -g pane-base-index 1
+      bind-key -n C-l send-keys C-l \; send-keys -R \; clear-history
+      set -g history-limit 999999999
+    owner: shanemcd
+    group: shanemcd
+    dest: /home/shanemcd/.tmux.conf

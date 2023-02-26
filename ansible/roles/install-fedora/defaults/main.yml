@@ -1,0 +1,10 @@
+debug: no
+
+fedora_arch_map:
+  x86_64: x86_64
+  arm64: aarch64
+
+vmware_guest_os_map:
+  x86_64: fedora-64
+  arm64: arm-fedora-64
+

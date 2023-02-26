@@ -2,12 +2,10 @@ url --mirrorlist=http://mirrors.fedoraproject.org/mirrorlist?repo=fedora-$releas
 repo --name=fedora-updates --mirrorlist="https://mirrors.fedoraproject.org/mirrorlist?repo=updates-released-f{{ fedora_major_version }}&arch=$basearch"
 network --onboot=yes --bootproto=dhcp --hostname=fedora{{ fedora_major_version }}
 
-bootloader --location=mbr --driveorder=sda
-clearpart --all --drives=sda
+bootloader --location=mbr
+clearpart --all --initlabel
 
-part /boot --size=512 --asprimary --ondrive=sda --fstype=xfs
-part / --size={{ disk_size - 1000 }} --grow --asprimary --ondrive=sda --fstype=xfs
-part biosboot --fstype=biosboot --size=1 --ondrive=sda --fstype=xfs
+autopart --type=lvm --fstype=xfs
 
 lang en_US.UTF-8
 keyboard dvorak

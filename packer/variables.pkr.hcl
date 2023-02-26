@@ -30,6 +30,14 @@ variable "kickstart_dir" {
   type = string
 }
 
+variable "guest_os_type" {
+  type = string
+}
+
+variable "architecture" {
+  type = string
+}
+
 variable "output_directory" {
   type = string
 }

@@ -38,7 +38,9 @@
   become: true
   user:
     name: shanemcd
-    groups: docker
+    groups: 
+      - docker
+      - wheel
 
 - name: Install ZSH
   shell: |

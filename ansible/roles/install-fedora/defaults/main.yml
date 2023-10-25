@@ -1,3 +1,5 @@
+fedora_version: "latest"
+
 debug: no
 
 fedora_arch_map:

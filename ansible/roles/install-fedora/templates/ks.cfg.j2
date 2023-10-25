@@ -1,6 +1,6 @@
 url --mirrorlist=http://mirrors.fedoraproject.org/mirrorlist?repo=fedora-$releasever&arch=$basearch
-repo --name=fedora-updates --mirrorlist="https://mirrors.fedoraproject.org/mirrorlist?repo=updates-released-f{{ fedora_major_version }}&arch=$basearch"
-network --onboot=yes --bootproto=dhcp --hostname=fedora{{ fedora_major_version }}
+repo --name=fedora-updates --mirrorlist="https://mirrors.fedoraproject.org/mirrorlist?repo=updates-released-f{{ fedora_version }}&arch=$basearch"
+network --onboot=yes --bootproto=dhcp --hostname={{ vm_name }}
 
 bootloader --location=mbr
 clearpart --all --initlabel
